@@ -46,20 +46,34 @@ function pickRandomMember(sheets:Client spreadsheetClient) returns string|error 
     sheets:Column completedMembers = check spreadsheetClient->getColumn(googleSheetID, googleSheetName, "B", ());
     sheets:Cell seedPoint = check spreadsheetClient->getCell(googleSheetID, googleSheetName, "E4", "UNFORMATTED_VALUE");
 
-    int numOfMembers = potentialMembers.values.length();
+    int numOfMembers = potentialMembers.values.length() - 1;
+    io:println("num of members : " + numOfMembers.toString());
 
-    check updateStatusCell(spreadsheetClient, "Getting weather data...");
-    int randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers - 1, <int>seedPoint.value);
-    string randomMember = potentialMembers.values[randomNumber].toString();
+    string winnerName;
+    if (numOfMembers == 1) {
+        winnerName = potentialMembers.values.pop().toString();
 
-    while (numOfMembers > premiumMemberNames.length() && premiumMemberNames.indexOf(randomMember) != ()) {
-        randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers - 1, <int>seedPoint.value);
-        randomMember = potentialMembers.values[randomNumber].toString();
+        // When all potential members are exhausted, it is necessary to reset the columns
+        foreach int i in 1 ... completedMembers.values.length() - 1 {
+            potentialMembers.values.push(completedMembers.values[i]);
+            completedMembers.values[i] = "";
+        }
+        completedMembers.values[1] = winnerName;
     }
+    else {
+        check updateStatusCell(spreadsheetClient, "Getting weather data...");
+        int randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers - 1, <int>seedPoint.value);
+        winnerName = potentialMembers.values[randomNumber].toString();
 
-    io:println(randomNumber);
+        while (numOfMembers > premiumMemberNames.length() && premiumMemberNames.indexOf(winnerName) != ()) {
+            randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers - 1, <int>seedPoint.value);
+            winnerName = potentialMembers.values[randomNumber].toString();
+        }
 
-    string winnerName = potentialMembers.values.remove(randomNumber).toString();
+        io:println(randomNumber);
+
+        _ = potentialMembers.values.remove(randomNumber);
+    }
     potentialMembers.values.push("");
     completedMembers.values.push(winnerName);
 
@@ -68,9 +82,9 @@ function pickRandomMember(sheets:Client spreadsheetClient) returns string|error 
     check spreadsheetClient->createOrUpdateColumn(googleSheetID, googleSheetName, "A", potentialMembers.values, "USER_ENTERED");
     check spreadsheetClient->createOrUpdateColumn(googleSheetID, googleSheetName, "B", completedMembers.values, "USER_ENTERED");
     check spreadsheetClient->setCell(googleSheetID, googleSheetName, "E1", winnerName);
-    check updateWinnerCell(spreadsheetClient, winnerName);
-
     check updateStatusCell(spreadsheetClient, "Winner Found");
+
+    check updateWinnerCell(spreadsheetClient, winnerName);
     return winnerName;
 }
 
