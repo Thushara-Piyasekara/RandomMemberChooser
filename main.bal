@@ -33,7 +33,7 @@ public isolated function initializeGoogleSheetClient() returns sheets:Client|err
 
 public function main() returns error? {
     string winnerName = check pickRandomMember();
-    log:printInfo(winnerName);
+    log:printInfo("winnerName = " + winnerName);
 }
 
 function pickRandomMember() returns string|error {
@@ -43,12 +43,13 @@ function pickRandomMember() returns string|error {
     sheets:Column potentialMembers = check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "A", ());
     sheets:Column completedMembers = check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "B", ());
     sheets:Cell seedPoint = check spreadsheetClient->getCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E4", "UNFORMATTED_VALUE");
+    log:printInfo("seed point = " + seedPoint.value.toString());
 
     // First index of the column array is the column name. (i.e., "Potential Members")
     int numOfMembers = potentialMembers.values.length() - 1;
     string winnerName;
 
-    if (numOfMembers == 1) {
+    if numOfMembers == 1 {
         winnerName = potentialMembers.values.pop().toString();
 
         // When all potential members are exhausted, it is necessary to reset the columns
@@ -62,7 +63,7 @@ function pickRandomMember() returns string|error {
         int randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers + 1, <int>seedPoint.value);
         winnerName = potentialMembers.values[randomNumber].toString();
 
-        while (numOfMembers > excludedMembers.length() && excludedMembers.indexOf(winnerName) != ()) {
+        while numOfMembers > excludedMembers.length() && excludedMembers.indexOf(winnerName) != () {
             randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers + 1, <int>seedPoint.value);
             winnerName = potentialMembers.values[randomNumber].toString();
         }
