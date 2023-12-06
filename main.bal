@@ -1,18 +1,19 @@
 import RandomMemberChooser.almostRandom;
 
-import ballerina/io;
+import ballerina/log;
 import ballerinax/googleapis.sheets;
 
 type GoogleSheetConfig record {|
     string refreshToken;
     string clientID;
     string clientSecret;
+    string googleSheetID;
+    string googleSheetName;
 |};
 
 configurable GoogleSheetConfig googleSheetConfigs = ?;
-configurable string googleSheetID = ?;
-configurable string googleSheetName = ?;
-configurable string[] premiumMemberNames = ?;
+configurable string[] excludedMembers = ?;
+final sheets:Client spreadsheetClient = check initializeGoogleSheetClient();
 
 public isolated function initializeGoogleSheetClient() returns sheets:Client|error {
 
@@ -31,25 +32,22 @@ public isolated function initializeGoogleSheetClient() returns sheets:Client|err
 }
 
 public function main() returns error? {
-    final sheets:Client spreadsheetClient = check initializeGoogleSheetClient();
-    // sheets:Spreadsheet|error sheet = spreadsheetClient->openSpreadsheetById(googleSheetID);
-
-    string winnerName = check pickRandomMember(spreadsheetClient);
-    io:println(winnerName);
+    string winnerName = check pickRandomMember();
+    log:printInfo(winnerName);
 }
 
-function pickRandomMember(sheets:Client spreadsheetClient) returns string|error {
-    check updateWinnerCell(spreadsheetClient, "Pending...");
-    check updateStatusCell(spreadsheetClient, "Reading Potential Members...");
+function pickRandomMember() returns string|error {
+    check updateWinnerCell("Pending...");
+    check updateStatusCell("Reading Potential Members...");
 
-    sheets:Column potentialMembers = check spreadsheetClient->getColumn(googleSheetID, googleSheetName, "A", ());
-    sheets:Column completedMembers = check spreadsheetClient->getColumn(googleSheetID, googleSheetName, "B", ());
-    sheets:Cell seedPoint = check spreadsheetClient->getCell(googleSheetID, googleSheetName, "E4", "UNFORMATTED_VALUE");
+    sheets:Column potentialMembers = check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "A", ());
+    sheets:Column completedMembers = check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "B", ());
+    sheets:Cell seedPoint = check spreadsheetClient->getCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E4", "UNFORMATTED_VALUE");
 
+    // First index of the column array is the column name. (i.e., "Potential Members")
     int numOfMembers = potentialMembers.values.length() - 1;
-    io:println("num of members : " + numOfMembers.toString());
-
     string winnerName;
+
     if (numOfMembers == 1) {
         winnerName = potentialMembers.values.pop().toString();
 
@@ -59,39 +57,38 @@ function pickRandomMember(sheets:Client spreadsheetClient) returns string|error 
             completedMembers.values[i] = "";
         }
         completedMembers.values[1] = winnerName;
-    }
-    else {
-        check updateStatusCell(spreadsheetClient, "Getting weather data...");
-        int randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers - 1, <int>seedPoint.value);
+    } else {
+        check updateStatusCell("Getting weather data...");
+        int randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers + 1, <int>seedPoint.value);
         winnerName = potentialMembers.values[randomNumber].toString();
 
-        while (numOfMembers > premiumMemberNames.length() && premiumMemberNames.indexOf(winnerName) != ()) {
-            randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers - 1, <int>seedPoint.value);
+        while (numOfMembers > excludedMembers.length() && excludedMembers.indexOf(winnerName) != ()) {
+            randomNumber = check almostRandom:createIntInRangeUsingWeather(1, numOfMembers + 1, <int>seedPoint.value);
             winnerName = potentialMembers.values[randomNumber].toString();
         }
 
-        io:println(randomNumber);
-
+        log:printInfo("random number :" + randomNumber.toString());
         _ = potentialMembers.values.remove(randomNumber);
     }
+
     potentialMembers.values.push("");
     completedMembers.values.push(winnerName);
 
     // Updating the columns
-    check updateStatusCell(spreadsheetClient, "Updating Columns...");
-    check spreadsheetClient->createOrUpdateColumn(googleSheetID, googleSheetName, "A", potentialMembers.values, "USER_ENTERED");
-    check spreadsheetClient->createOrUpdateColumn(googleSheetID, googleSheetName, "B", completedMembers.values, "USER_ENTERED");
-    check spreadsheetClient->setCell(googleSheetID, googleSheetName, "E1", winnerName);
-    check updateStatusCell(spreadsheetClient, "Winner Found");
+    check updateStatusCell("Updating Columns...");
+    check spreadsheetClient->createOrUpdateColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "A", potentialMembers.values, "USER_ENTERED");
+    check spreadsheetClient->createOrUpdateColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "B", completedMembers.values, "USER_ENTERED");
+    check spreadsheetClient->setCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E1", winnerName);
+    check updateStatusCell("Winner Found");
+    check updateWinnerCell(winnerName);
 
-    check updateWinnerCell(spreadsheetClient, winnerName);
     return winnerName;
 }
 
-function updateStatusCell(sheets:Client spreadsheetClient, string message) returns error? {
-    check spreadsheetClient->setCell(googleSheetID, googleSheetName, "E5", message);
+function updateStatusCell(string message) returns error? {
+    check spreadsheetClient->setCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E5", message);
 }
 
-function updateWinnerCell(sheets:Client spreadsheetClient, string winnerName) returns error? {
-    check spreadsheetClient->setCell(googleSheetID, googleSheetName, "E1", winnerName);
+function updateWinnerCell(string winnerName) returns error? {
+    check spreadsheetClient->setCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E1", winnerName);
 }
