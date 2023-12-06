@@ -1,7 +1,11 @@
 import RandomMemberChooser.almostRandom;
 
+import ballerina/http;
 import ballerina/log;
 import ballerinax/googleapis.sheets;
+
+configurable GoogleSheetConfig googleSheetConfigs = ?;
+configurable string[] excludedMembers = ?;
 
 type GoogleSheetConfig record {|
     string refreshToken;
@@ -11,8 +15,6 @@ type GoogleSheetConfig record {|
     string googleSheetName;
 |};
 
-configurable GoogleSheetConfig googleSheetConfigs = ?;
-configurable string[] excludedMembers = ?;
 final sheets:Client spreadsheetClient = check initializeGoogleSheetClient();
 
 public isolated function initializeGoogleSheetClient() returns sheets:Client|error {
@@ -31,9 +33,12 @@ public isolated function initializeGoogleSheetClient() returns sheets:Client|err
     return gsClient;
 }
 
-public function main() returns error? {
-    string winnerName = check pickRandomMember();
-    log:printInfo("winnerName = " + winnerName);
+service / on new http:Listener(9095) {
+    resource function get randomMember() returns string|error? {
+        string winnerName = check pickRandomMember();
+        log:printInfo("winnerName = " + winnerName);
+        return winnerName;
+    }
 }
 
 function pickRandomMember() returns string|error {
@@ -68,7 +73,6 @@ function pickRandomMember() returns string|error {
             winnerName = potentialMembers.values[randomNumber].toString();
         }
 
-        log:printInfo("random number :" + randomNumber.toString());
         _ = potentialMembers.values.remove(randomNumber);
     }
 
