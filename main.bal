@@ -26,9 +26,7 @@ public isolated function initializeGoogleSheetClient() returns sheets:Client|err
         }
     };
 
-    final sheets:Client gsClient = check new (spreadsheetConfig);
-
-    return gsClient;
+    return check new (spreadsheetConfig);
 }
 
 public function main() returns error? {
@@ -40,15 +38,19 @@ function pickRandomMember() returns string|error {
     check updateWinnerCell("Pending...");
     check updateStatusCell("Reading Potential Members...");
 
-    sheets:Column potentialMembers = check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "A", ());
-    sheets:Column completedMembers = check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "B", ());
-    sheets:Cell seedPoint = check spreadsheetClient->getCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E4", "UNFORMATTED_VALUE");
+    sheets:Column potentialMembers =
+        check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "A", ());
+    sheets:Column completedMembers =
+        check spreadsheetClient->getColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "B", ());
+    sheets:Cell seedPoint =
+        check spreadsheetClient->getCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E4", "UNFORMATTED_VALUE");
+
     log:printInfo("seed point = " + seedPoint.value.toString());
 
     // First index of the column array is the column name. (i.e., "Potential Members")
     int numOfMembers = potentialMembers.values.length() - 1;
-    string winnerName;
 
+    string winnerName;
     if numOfMembers == 1 {
         winnerName = potentialMembers.values.pop().toString();
 

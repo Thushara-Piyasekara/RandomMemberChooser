@@ -17,9 +17,9 @@ type APIConfig record {|
     string longitude;
 |};
 
-public isolated function createIntInRangeUsingWeather(int startRange, int endRange, int seedPoint) returns int|Error {
+public isolated function createIntInRangeUsingWeather(int startRange, int endRange, int seedPoint) returns int|error {
     if startRange >= endRange {
-        return error Error("End range value must be greater than the start range value");
+        return error("End range value must be greater than the start range value");
     }
 
     int randomInt = <int>(lcgWeather(seedPoint) / m * (<decimal>(endRange - 1) - <decimal>startRange) + <decimal>startRange);
