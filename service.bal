@@ -82,10 +82,9 @@ function pickRandomMember() returns string|error {
     // Updating the columns
     check updateStatusCell("Updating Columns...");
     check spreadsheetClient->createOrUpdateColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "A", potentialMembers.values, "USER_ENTERED");
-    check spreadsheetClient->createOrUpdateColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "B", completedMembers.values, "USER_ENTERED");
-    check spreadsheetClient->setCell(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "E1", winnerName);
     check updateStatusCell("Winner Found");
     check updateWinnerCell(winnerName);
+    check spreadsheetClient->createOrUpdateColumn(googleSheetConfigs.googleSheetID, googleSheetConfigs.googleSheetName, "B", completedMembers.values, "USER_ENTERED");
 
     return winnerName;
 }
